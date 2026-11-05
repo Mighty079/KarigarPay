@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karigar Pay — Working Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   Palette drawn from natural handloom dye colours:
+   indigo (ink), madder root (red), turmeric (gold), petrol teal.
+   ============================================================ */
+:root{
+  --bg: #FAF6EE;
+  --paper: #FFFFFF;
+  --ink: #211A2E;
+  --ink-soft: #4A4457;
+  --muted: #837B8C;
+  --line: rgba(33,26,46,0.12);
+  --line-strong: rgba(33,26,46,0.22);
+
+  --red: #B8503F;
+  --red-soft: #F3E1DC;
+  --gold: #C08A2C;
+  --gold-soft: #F4E8D2;
+  --teal: #0E5C5B;
+  --teal-soft: #DCEBE9;
+  --moss: #57724F;
+  --moss-soft: #E4EBDF;
+
+  --font-display: 'Fraunces', Georgia, 'Iowan Old Style', serif;
+  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(33,26,46,0.04), 0 6px 20px -8px rgba(33,26,46,0.15);
+}
+
+*{ box-sizing: border-box; }
+html{ scroll-behavior: smooth; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* woven texture — signature visual motif, used sparingly */
+.woven-texture{
+  background-image: repeating-linear-gradient(90deg, rgba(33,26,46,0.05) 0px, rgba(33,26,46,0.05) 1px, transparent 1px, transparent 10px);
+}
+
+h1,h2,h3,h4{ font-family: var(--font-display); font-weight: 600; margin: 0; color: var(--ink); }
+p{ margin: 0; }
+button{ font-family: inherit; }
+input, select{ font-family: inherit; }
+
+::selection{ background: var(--gold-soft); }
+
+a{ color: inherit; }
+
+/* focus visibility */
+button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible{
+  outline: 2.5px solid var(--teal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ============================================================
+   SHELL / HEADER
+   ============================================================ */
+.shell{ max-width: 1180px; margin: 0 auto; padding: 0 22px 60px; }
+
+.topbar{
+  position: sticky; top:0; z-index: 50;
+  background: rgba(250,246,238,0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner{
+  max-width: 1180px; margin:0 auto; padding: 14px 22px;
+  display:flex; align-items:center; gap:22px; flex-wrap: wrap;
+}
+.brand{ display:flex; align-items:center; gap:10px; margin-right: auto; flex-shrink:0; }
+.brand-mark{ width:30px; height:30px; flex-shrink:0; }
+.brand-name{ font-family: var(--font-display); font-weight:700; font-size: 19px; letter-spacing:-0.01em; }
+.brand-tag{ font-size: 11px; color: var(--muted); font-weight:600; text-transform: uppercase; letter-spacing: 0.06em; margin-left:2px; padding-top:2px;}
+
+.tabs{
+  display:flex; gap:2px; background: rgba(33,26,46,0.045); border-radius: 999px; padding:3px;
+  min-width:0; max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{ display:none; }
+.tab-btn{
+  border:none; background:transparent; cursor:pointer;
+  padding: 8px 16px; border-radius:999px; font-size: 13.5px; font-weight:600; color: var(--ink-soft);
+  transition: background 0.18s ease, color 0.18s ease;
+  white-space: nowrap; flex-shrink:0;
+}
+.tab-btn:hover{ color: var(--ink); }
+.tab-btn.active{ background: var(--ink); color: #fff; }
+
+.status-strip{
+  display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px;
+}
+.status-chip{
+  display:flex; align-items:center; gap:7px;
+  background: var(--paper); border:1px solid var(--line); border-radius: 10px;
+  padding: 7px 12px; font-size: 12.5px; font-weight:600; color: var(--ink-soft);
+  box-shadow: var(--shadow);
+}
+.status-chip .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.status-chip b{ color: var(--ink); font-family: var(--font-mono); font-weight:600; }
+.status-chip.dim{ opacity:0.55; }
+
+/* ============================================================
+   LAYOUT PRIMITIVES
+   ============================================================ */
+.view{ display:none; padding-top: 28px; animation: fadeUp 0.35s ease; }
+.view.active{ display:block; }
+@keyframes fadeUp{ from{ opacity:0; transform: translateY(6px); } to{ opacity:1; transform:none; } }
+
+.view-head{ margin-bottom: 22px; }
+.view-eyebrow{ font-size:11.5px; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; color: var(--red); margin-bottom:6px; }
+.view-title{ font-size: 27px; }
+.view-sub{ color: var(--muted); font-size:14px; margin-top:6px; max-width: 640px; }
+
+.grid-2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
+.grid-3{ display:grid; grid-template-columns: repeat(3,1fr); gap:16px; }
+.grid-2 > *, .grid-3 > *{ min-width:0; }
+@media (max-width: 860px){ .grid-2{ grid-template-columns:1fr; } .grid-3{ grid-template-columns:1fr; } }
+
+.card{
+  background: var(--paper); border:1px solid var(--line); border-radius: var(--radius);
+  padding: 20px; box-shadow: var(--shadow);
+}
+.card-title{ font-size:15px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.card-title svg{ width:18px; height:18px; flex-shrink:0; }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border:none; border-radius:10px; padding: 11px 18px; font-weight:700; font-size:13.5px;
+  cursor:pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+}
+.btn:active{ transform: translateY(1px); }
+.btn-primary{ background: var(--ink); color:#fff; }
+.btn-primary:hover{ background:#33283f; }
+.btn-primary:disabled{ background:#c8c2cf; cursor:not-allowed; }
+.btn-outline{ background:transparent; border:1.5px solid var(--line-strong); color:var(--ink); }
+.btn-outline:hover{ border-color: var(--ink); }
+.btn-teal{ background: var(--teal); color:#fff; }
+.btn-teal:hover{ background:#0a4746; }
+.btn-red{ background: var(--red); color:#fff; }
+.btn-red:hover{ background:#9c3f30; }
+.btn-sm{ padding:7px 13px; font-size:12.5px; border-radius:8px; }
+.btn-block{ width:100%; }
+
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em; }
+.field input, .field select{
+  width:100%; padding: 10px 12px; border-radius:9px; border:1.5px solid var(--line-strong);
+  font-size:14px; background:#fff; color: var(--ink);
+}
+.field-hint{ font-size:11.5px; color:var(--muted); margin-top:5px; }
+
+.badge{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:0.03em; }
+.badge-green{ background: var(--moss-soft); color: var(--moss); }
+.badge-gold{ background: var(--gold-soft); color:#8a6218; }
+.badge-red{ background: var(--red-soft); color: var(--red); }
+.badge-teal{ background: var(--teal-soft); color: var(--teal); }
+.badge-gray{ background: rgba(33,26,46,0.07); color: var(--ink-soft); }
+
+/* ============================================================
+   WALLET
+   ============================================================ */
+.wallet-hero{
+  background: linear-gradient(135deg, var(--ink) 0%, #362a45 60%, var(--teal) 130%);
+  border-radius: var(--radius); padding: 26px; color:#fff; position:relative; overflow:hidden;
+}
+.wallet-hero::after{
+  content:''; position:absolute; inset:0;
+  background-image: repeating-linear-gradient(100deg, rgba(255,255,255,0.045) 0px, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 14px);
+  pointer-events:none;
+}
+.wallet-hero-top{ display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:1;}
+.wallet-label{ font-size:12px; text-transform:uppercase; letter-spacing:0.08em; opacity:0.7; font-weight:700;}
+.wallet-balance{ font-family: var(--font-display); font-size:42px; font-weight:600; margin-top:6px; }
+.wallet-account{ font-family: var(--font-mono); font-size:12.5px; opacity:0.75; margin-top:14px; position:relative; z-index:1;}
+.wallet-card-chip{ width:38px; height:28px; border-radius:5px; background: linear-gradient(135deg,#d9bd6b,#b89446); position:relative; z-index:1; margin-top:18px;}
+
+.ledger{ margin-top:6px; }
+.ledger-row{
+  display:flex; align-items:center; gap:12px; padding: 11px 0; border-bottom: 1px solid var(--line);
+}
+.ledger-row:last-child{ border-bottom:none; }
+.ledger-icon{ width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ledger-main{ flex:1; min-width:0; }
+.ledger-label{ font-size:13.5px; font-weight:600; }
+.ledger-time{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+.ledger-amount{ font-family: var(--font-mono); font-weight:700; font-size:14px; white-space:nowrap; }
+.ledger-amount.credit{ color: var(--moss); }
+.ledger-amount.debit{ color: var(--red); }
+.ledger-amount.neutral{ color: var(--ink-soft); }
+.ledger-empty{ color:var(--muted); font-size:13px; padding: 18px 0; text-align:center; }
+
+.sim-controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+
+/* ============================================================
+   LOOM LOAN
+   ============================================================ */
+.limit-meter{ margin: 10px 0 18px; }
+.limit-track{ height:10px; border-radius:99px; background: rgba(33,26,46,0.08); overflow:hidden; position:relative; }
+.limit-fill{ height:100%; border-radius:99px; background: linear-gradient(90deg, var(--teal), var(--moss)); transition: width 0.5s ease; }
+.limit-labels{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); margin-top:6px; }
+
+.flow-row{ display:flex; align-items:center; gap:8px; margin: 18px 0; overflow-x:auto; padding-bottom:4px; }
+.flow-node{ flex:1; min-width:100px; background: var(--bg); border:1px dashed var(--line-strong); border-radius:10px; padding:12px; text-align:center; }
+.flow-node-icon{ width:30px; height:30px; margin:0 auto 6px; }
+.flow-node-label{ font-size:11.5px; font-weight:700; color: var(--ink-soft); }
+.flow-arrow{ width:20px; height:20px; flex-shrink:0; color: var(--muted); }
+
+.shuttle-loader{
+  height: 46px; border-radius:8px; background: var(--bg); position:relative; overflow:hidden;
+  border: 1px solid var(--line); margin: 14px 0; display:none;
+}
+.shuttle-loader.active{ display:block; }
+.shuttle-warp{ position:absolute; inset:0; background-image: repeating-linear-gradient(90deg, rgba(33,26,46,0.14) 0 1.5px, transparent 1.5px 13px); }
+.shuttle{
+  position:absolute; top:50%; left:-24px; width:22px; height:12px; margin-top:-6px;
+  background: var(--red); border-radius:3px;
+  animation: shuttle-move 1.15s linear forwards;
+  box-shadow: 0 2px 5px rgba(184,80,63,0.5);
+}
+@keyframes shuttle-move{ from{ left:-24px; } to{ left: 100%; } }
+.shuttle-thread{
+  position:absolute; top:50%; left:0; height:2px; margin-top:-1px; background: var(--red);
+  width:0; animation: thread-grow 1.15s linear forwards;
+}
+@keyframes thread-grow{ from{ width:0; } to{ width:100%; } }
+
+.loan-status-card{ background: var(--teal-soft); border-radius:10px; padding:14px; margin-top:14px; }
+.loan-status-row{ display:flex; justify-content:space-between; font-size:13px; padding:4px 0; }
+.loan-status-row b{ font-family: var(--font-mono); }
+
+/* ============================================================
+   INSURANCE
+   ============================================================ */
+.suraksha-toggle{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  background: var(--bg); border-radius:10px; padding:16px; margin-bottom:16px;
+}
+.switch{ position:relative; width:46px; height:26px; flex-shrink:0; }
+.switch input{ opacity:0; width:0; height:0; }
+.switch-track{ position:absolute; inset:0; background: var(--line-strong); border-radius:99px; cursor:pointer; transition: background 0.2s; }
+.switch-knob{ position:absolute; top:3px; left:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.switch input:checked + .switch-track{ background: var(--moss); }
+.switch input:checked + .switch-track .switch-knob{ transform: translateX(20px); }
+
+.claim-verify{ display:none; align-items:center; gap:10px; font-size:13px; color: var(--ink-soft); margin-top:12px; }
+.claim-verify.active{ display:flex; }
+.spinner{ width:16px; height:16px; border-radius:50%; border:2.5px solid var(--line-strong); border-top-color: var(--teal); animation: spin 0.7s linear infinite; flex-shrink:0; }
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+.payout-flash{
+  background: var(--moss-soft); border-radius:10px; padding:14px; margin-top:12px; display:none;
+  animation: flashIn 0.4s ease;
+}
+.payout-flash.active{ display:block; }
+@keyframes flashIn{ from{ opacity:0; transform: scale(0.97);} to{ opacity:1; transform:none; } }
+
+/* ============================================================
+   WHATSAPP ASSISTANT
+   ============================================================ */
+.wa-shell{
+  background: #E9DFD3; border-radius: var(--radius); overflow:hidden; box-shadow: var(--shadow);
+  max-width: 460px; margin: 0 auto; border: 1px solid var(--line);
+}
+.wa-header{
+  background: var(--teal); color:#fff; padding: 14px 16px; display:flex; align-items:center; gap:10px;
+}
+.wa-avatar{ width:36px; height:36px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.wa-avatar svg{ width:20px; height:20px; color: var(--teal); }
+.wa-header-name{ font-weight:700; font-size:14.5px; }
+.wa-header-status{ font-size:11.5px; opacity:0.85; }
+.wa-body{
+  height: 420px; overflow-y:auto; padding: 14px 12px;
+  background-image: radial-gradient(rgba(33,26,46,0.035) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.wa-msg{ display:flex; margin-bottom:10px; }
+.wa-msg.out{ justify-content:flex-end; }
+.wa-bubble{
+  max-width: 78%; padding: 9px 12px; border-radius: 11px; font-size:13.5px; line-height:1.45;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.06); position:relative;
+}
+.wa-msg.in .wa-bubble{ background:#fff; border-top-left-radius:3px; }
+.wa-msg.out .wa-bubble{ background:#DCF3D3; border-top-right-radius:3px; }
+.wa-time{ font-size:10px; color:var(--muted); margin-top:3px; text-align:right; }
+.wa-voice{ display:flex; align-items:center; gap:8px; min-width:180px; }
+.wa-voice-play{ width:28px; height:28px; border-radius:50%; background: var(--teal); display:flex; align-items:center; justify-content:center; flex-shrink:0; cursor:pointer; border:none; }
+.wa-voice-play svg{ width:13px; height:13px; color:#fff; }
+.wa-waveform{ display:flex; align-items:center; gap:2px; height:20px; flex:1; }
+.wa-waveform span{ width:2.5px; background: var(--teal); opacity:0.5; border-radius:2px; }
+.wa-voice-dur{ font-size:11px; color:var(--muted); }
+.wa-transcript{ font-size:11.5px; color:var(--muted); font-style:italic; margin-top:5px; padding-top:5px; border-top:1px solid var(--line); display:none; }
+.wa-transcript.show{ display:block; }
+
+.wa-typing{ display:none; }
+.wa-typing.active{ display:flex; }
+.wa-typing .wa-bubble{ display:flex; gap:3px; align-items:center; padding:11px 14px; }
+.wa-typing-dot{ width:6px; height:6px; border-radius:50%; background:var(--muted); animation: typingBounce 1s infinite; }
+.wa-typing-dot:nth-child(2){ animation-delay:0.15s; }
+.wa-typing-dot:nth-child(3){ animation-delay:0.3s; }
+@keyframes typingBounce{ 0%,60%,100%{ transform:translateY(0); opacity:0.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+
+.wa-quickreplies{ display:flex; flex-wrap:wrap; gap:7px; padding: 10px 12px; background:#f5f1e8; border-top:1px solid var(--line); }
+.qr-btn{
+  background:#fff; border:1.5px solid var(--teal); color:var(--teal); font-weight:700; font-size:12px;
+  padding:7px 12px; border-radius:999px; cursor:pointer; transition: background 0.15s;
+}
+.qr-btn:hover{ background: var(--teal-soft); }
+.wa-input-row{ display:flex; gap:8px; padding:10px 12px; background:#f5f1e8; }
+.wa-input-row input{ flex:1; border-radius:20px; border:1px solid var(--line-strong); padding:9px 14px; font-size:13px; }
+.wa-send{ width:38px; height:38px; border-radius:50%; background: var(--teal); border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+.wa-send svg{ width:16px; height:16px; color:#fff; }
+
+/* ============================================================
+   LCI ENGINE
+   ============================================================ */
+.slider-row{ margin-bottom: 18px; }
+.slider-row-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+.slider-row-top label{ font-size:13px; font-weight:700; }
+.slider-row-top span{ font-family: var(--font-mono); font-size:13px; color:var(--ink-soft); font-weight:600; }
+input[type=range]{
+  width:100%; -webkit-appearance:none; height:6px; border-radius:99px; background: rgba(33,26,46,0.09); outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background: var(--ink); cursor:pointer;
+  border:3px solid #fff; box-shadow: 0 0 0 1px var(--line-strong);
+}
+input[type=range]::-moz-range-thumb{
+  width:18px; height:18px; border-radius:50%; background: var(--ink); cursor:pointer; border:3px solid #fff;
+}
+
+.archetype-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+.archetype-btn{
+  border:1.5px solid var(--line-strong); background:#fff; border-radius:9px; padding:8px 13px;
+  font-size:12px; font-weight:700; cursor:pointer; color:var(--ink-soft);
+}
+.archetype-btn:hover{ border-color: var(--ink); color:var(--ink); }
+.archetype-btn.active{ background: var(--ink); color:#fff; border-color:var(--ink); }
+
+.score-dial-wrap{ text-align:center; padding: 10px 0 4px; }
+.score-value{ font-family: var(--font-display); font-size:52px; font-weight:600; line-height:1; }
+.score-band-label{ margin-top:8px; }
+.score-range-note{ font-size:11.5px; color:var(--muted); margin-top:6px; }
+
+.months-chart{ display:flex; align-items:flex-end; gap:5px; height:110px; margin: 14px 0 6px; }
+.month-bar-wrap{ flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.month-bar{ width:100%; border-radius:4px 4px 0 0; background: var(--teal); transition: height 0.35s ease, background 0.3s ease; min-height:3px; }
+.month-bar.monsoon{ background: var(--gold); }
+.month-label{ font-size:9.5px; color:var(--muted); margin-top:5px; }
+@media (max-width: 480px){
+  .months-chart{ gap:3px; }
+  .month-label{ font-size:8px; }
+  .card{ padding:16px; }
+}
+.cv-readout{ display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; font-size:12.5px; }
+.cv-readout div b{ display:block; font-family: var(--font-mono); font-size:16px; color:var(--ink); margin-top:2px; }
+
+.contrib-bars{ margin-top: 6px; }
+.contrib-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.contrib-name{ width:150px; font-size:12px; font-weight:600; flex-shrink:0; }
+.contrib-track{ flex:1; height:8px; background: rgba(33,26,46,0.07); border-radius:99px; position:relative; }
+.contrib-fill{ position:absolute; top:0; bottom:0; border-radius:99px; }
+.contrib-fill.pos{ background: var(--moss); left:50%; }
+.contrib-fill.neg{ background: var(--red); right:50%; }
+.contrib-mid{ position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background: var(--line-strong); }
+.contrib-val{ width:52px; text-align:right; font-family:var(--font-mono); font-size:11.5px; font-weight:600; flex-shrink:0; }
+
+.json-output{
+  background: #1E1826; color:#E9E2F5; border-radius:10px; padding:16px; font-family: var(--font-mono);
+  font-size:12px; line-height:1.6; overflow-x:auto; white-space:pre;
+}
+.json-key{ color:#8FD6C4; }
+.json-str{ color:#F0C48A; }
+.json-num{ color:#9FC7F5; }
+.json-bool{ color:#E39BC0; }
+
+.section-note{ font-size:12px; color:var(--muted); background: var(--bg); border-radius:8px; padding:10px 12px; margin-top:10px; }
+
+footer.reset-bar{ text-align:center; padding: 30px 0 10px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none">
+        <rect width="32" height="32" rx="8" fill="#211A2E"/>
+        <path d="M6 10h20M6 16h20M6 22h20" stroke="#F4E8D2" stroke-width="1.4"/>
+        <path d="M11 6v20M16 6v20M21 6v20" stroke="#B8503F" stroke-width="1.4"/>
+      </svg>
+      <span class="brand-name">Karigar Pay</span>
+      <span class="brand-tag">Live Prototype</span>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" data-view="wallet">Wallet</button>
+      <button class="tab-btn" data-view="loan">Loom Loan</button>
+      <button class="tab-btn" data-view="insurance">Loom Suraksha</button>
+      <button class="tab-btn" data-view="assistant">Assistant</button>
+      <button class="tab-btn" data-view="lci">Credit Engine</button>
+    </div>
+  </div>
+  <div class="shell" style="padding-top:0;padding-bottom:12px;">
+    <div class="status-strip" id="statusStrip"></div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <!-- ============================================================ WALLET ============================================================ -->
+  <section class="view active" id="view-wallet">
+    <div class="view-head">
+      <div class="view-eyebrow">Module 1 · Digital Payments</div>
+      <h2 class="view-title">Karigar Wallet</h2>
+      <p class="view-sub">This wallet's balance and ledger are live — every other module reads from the same state. Simulate a sale below and watch it happen.</p>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="wallet-hero">
+          <div class="wallet-hero-top">
+            <div>
+              <div class="wallet-label">Available balance</div>
+              <div class="wallet-balance" id="walletBalance">₹0</div>
+            </div>
+            <div style="text-align:right;">
+              <div class="wallet-label">Linked card</div>
+              <div class="wallet-card-chip"></div>
+            </div>
+          </div>
+          <div class="wallet-account">VA · 4218 9903 KGRP &nbsp;·&nbsp; RuPay •••• 7742</div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10h18M6 10V6a2 2 0 012-2h8a2 2 0 012 2v4M4 10h16v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9z"/></svg>
+            Simulate incoming payment
+          </div>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Stand-in for a cooperative or marketplace buyer settling a fabric order into this wallet.</p>
+          <div class="sim-controls">
+            <button class="btn btn-teal" onclick="simulateSale(1200,'Saree order · Bhavani Co-operative')">₹1,200 · Saree order</button>
+            <button class="btn btn-outline" onclick="simulateSale(2600,'Bulk order · Regional Marketplace')">₹2,600 · Bulk order</button>
+            <button class="btn btn-outline" onclick="simulateSale(450,'Retail sale · Local buyer')">₹450 · Retail sale</button>
+          </div>
+          <div class="section-note" id="repayNote" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Transaction ledger
+        </div>
+        <div class="ledger" id="ledgerList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LOOM LOAN ============================================================ -->
+  <section class="view" id="view-loan">
+    <div class="view-head">
+      <div class="view-eyebrow">Module 2 · Micro-Credit</div>
+      <h2 class="view-title">Loom Loan</h2>
+      <p class="view-sub">Your available limit is computed live from the Credit Engine score. Disburse a loan, then go back to Wallet and simulate a sale to see auto-repayment fire.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          Pre-approved limit
+        </div>
+        <div class="limit-meter">
+          <div class="limit-track"><div class="limit-fill" id="limitFill" style="width:0%"></div></div>
+          <div class="limit-labels"><span>₹0</span><span id="limitMax">₹50,000</span></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px;">
+          <span style="font-size:13px;color:var(--muted);">Available to borrow</span>
+          <span id="limitAvailable" style="font-family:var(--font-mono);font-weight:700;font-size:17px;"></span>
+        </div>
+
+        <div class="field">
+          <label for="loanAmount">Amount to disburse (Buy Yarn)</label>
+          <input type="number" id="loanAmount" placeholder="e.g. 5000" min="500" step="500">
+          <div class="field-hint">Funds route directly to the raw-material supplier — they do not enter your wallet balance.</div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="buyYarn()">Buy Yarn — Disburse Instantly</button>
+
+        <div class="shuttle-loader" id="loanShuttle">
+          <div class="shuttle-warp"></div>
+          <div class="shuttle-thread"></div>
+          <div class="shuttle"></div>
+        </div>
+
+        <div class="flow-row">
+          <div class="flow-node">
+            <svg class="flow-node-icon" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="1.6"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+            <div class="flow-node-label">NBFC Capital</div>
+          </div>
+          <svg class="flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <div class="flow-node">
+            <svg class="flow-node-icon" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.6"><path d="M4 4h16v6H4zM4 14h10v6H4z"/></svg>
+            <div class="flow-node-label">Yarn Supplier</div>
+          </div>
+          <svg class="flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <div class="flow-node">
+            <svg class="flow-node-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6"><path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.4L12 14.5 7.1 17.1 8 11.7l-4-3.9 5.5-.8z"/></svg>
+            <div class="flow-node-label">Raw Material</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          Active loan status
+        </div>
+        <div id="loanStatusEmpty" style="color:var(--muted); font-size:13.5px; padding: 10px 0;">No active Loom Loan. Disburse one to see repayment mechanics in action.</div>
+        <div class="loan-status-card" id="loanStatusCard" style="display:none;">
+          <div class="loan-status-row"><span>Principal disbursed</span><b id="loanPrincipal">₹0</b></div>
+          <div class="loan-status-row"><span>Outstanding balance</span><b id="loanOutstanding">₹0</b></div>
+          <div class="loan-status-row"><span>Auto-repayment split</span><b>15% of every sale</b></div>
+        </div>
+        <div class="section-note">Every incoming wallet payment while a loan is active automatically splits: 15% services this loan, 85% releases to you instantly. No manual EMI, no collection call. Try it: go to Wallet → simulate a sale.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ INSURANCE ============================================================ -->
+  <section class="view" id="view-insurance">
+    <div class="view-head">
+      <div class="view-eyebrow">Module 3 · Micro-Insurance</div>
+      <h2 class="view-title">Loom Suraksha</h2>
+      <p class="view-sub">₹10/month, auto-deducted from your wallet. File a simulated claim to see the automated trigger-based payout — no paperwork queue.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3C7 3 3 7 3 12v5a2 2 0 002 2h1v-8a6 6 0 0112 0v8h1a2 2 0 002-2v-5c0-5-4-9-9-9z"/></svg>
+          Coverage
+        </div>
+        <div class="suraksha-toggle">
+          <div>
+            <div style="font-weight:700; font-size:13.5px;">Loom Breakdown &amp; Health Interruption</div>
+            <div style="font-size:12px; color:var(--muted); margin-top:2px;">₹10/month · flat ₹2,000 payout on a valid trigger</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="insToggle" onchange="toggleInsurance(this.checked)">
+            <span class="switch-track"><span class="switch-knob"></span></span>
+          </label>
+        </div>
+        <button class="btn btn-outline btn-block" onclick="simulateMonth()">Simulate a month passing (premium deduction)</button>
+        <div class="section-note" id="insStatusNote" style="margin-top:14px;">Not enrolled. Turn on coverage above.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-9-9 9 9 0 019 9z"/></svg>
+          File a claim
+        </div>
+        <div class="field">
+          <label for="claimType">Trigger type</label>
+          <select id="claimType">
+            <option value="loom">Loom breakdown — repair-shop ticket confirmed</option>
+            <option value="health">Health interruption — hospital admission confirmed</option>
+          </select>
+        </div>
+        <button class="btn btn-red btn-block" id="claimBtn" onclick="fileClaim()">Submit claim trigger</button>
+        <div class="claim-verify" id="claimVerify"><div class="spinner"></div><span>Insurer API confirming trigger…</span></div>
+        <div class="payout-flash" id="payoutFlash"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ ASSISTANT ============================================================ -->
+  <section class="view" id="view-assistant">
+    <div class="view-head">
+      <div class="view-eyebrow">Module 4 · Voice-First Interface</div>
+      <h2 class="view-title">WhatsApp Assistant</h2>
+      <p class="view-sub">The same wallet, loan, and score — through the one interface a weaver already knows how to use. Try the quick replies, or play the voice note.</p>
+    </div>
+
+    <div class="wa-shell">
+      <div class="wa-header">
+        <div class="wa-avatar">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 3a3 3 0 110 6 3 3 0 010-6zm0 14a7 7 0 01-5.7-3c.03-1.7 3.8-2.6 5.7-2.6s5.67.9 5.7 2.6A7 7 0 0112 19z"/></svg>
+        </div>
+        <div>
+          <div class="wa-header-name">Karigar Sahayak</div>
+          <div class="wa-header-status">online</div>
+        </div>
+      </div>
+      <div class="wa-body" id="waBody"></div>
+      <div class="wa-quickreplies">
+        <button class="qr-btn" onclick="waAction('balance')">Check balance</button>
+        <button class="qr-btn" onclick="waAction('score')">My score</button>
+        <button class="qr-btn" onclick="waAction('buyyarn')">Buy yarn ₹4,000</button>
+        <button class="qr-btn" onclick="waAction('claim')">File insurance claim</button>
+        <button class="qr-btn" onclick="waAction('voice')">▶ Play voice note demo</button>
+      </div>
+      <div class="wa-input-row">
+        <input type="text" placeholder="Type a message…" id="waTextInput" onkeydown="if(event.key==='Enter')waSendText()">
+        <button class="wa-send" onclick="waSendText()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LCI ENGINE ============================================================ -->
+  <section class="view" id="view-lci">
+    <div class="view-head">
+      <div class="view-eyebrow">Module 5 · Credit Scoring</div>
+      <h2 class="view-title">Livelihood Capital Index Engine</h2>
+      <p class="view-sub">Drag the sliders, or load a weaver archetype. The score, the loan limit, and the JSON payload below all recompute live — this is the same maths as the Python underwriting engine.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+          Weaver profile
+        </div>
+        <div class="archetype-row">
+          <button class="archetype-btn" onclick="loadArchetype('reliable')">Reliable Veteran</button>
+          <button class="archetype-btn" onclick="loadArchetype('seasonal')">Seasonal Weaver</button>
+          <button class="archetype-btn" onclick="loadArchetype('volatile')">Volatile Producer</button>
+          <button class="archetype-btn" onclick="loadArchetype('new')">New Entrant</button>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin-bottom:8px;">Monthly production (units woven)</div>
+        <div class="months-chart" id="monthsChart"></div>
+        <div class="cv-readout">
+          <div>Raw CV<b id="rawCv">–</b></div>
+          <div>Monsoon-adjusted CV<b id="adjCv">–</b></div>
+          <div>Used for scoring<b id="usedCv">–</b></div>
+        </div>
+        <label style="display:flex; align-items:center; gap:9px; margin-top:12px; font-size:12.5px; font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="monsoonToggle" checked onchange="recompute()" style="width:15px;height:15px;">
+          Apply monsoon adjustment (exclude Jul–Sep from volatility calc when it explains the dip)
+        </label>
+
+        <div style="height:1px;background:var(--line);margin:20px 0;"></div>
+
+        <div class="slider-row">
+          <div class="slider-row-top"><label>Sales &amp; fulfilment history</label><span id="valFulfillment">75</span></div>
+          <input type="range" id="sldFulfillment" min="0" max="100" value="75" oninput="recompute()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-row-top"><label>Cooperative / SHG standing</label><span id="valCoop">60</span></div>
+          <input type="range" id="sldCoop" min="0" max="100" value="60" oninput="recompute()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-row-top"><label>Digital payment footprint</label><span id="valDigital">65</span></div>
+          <input type="range" id="sldDigital" min="0" max="100" value="65" oninput="recompute()">
+        </div>
+        <div class="slider-row">
+          <div class="slider-row-top"><label>Govt. scheme enrolment</label><span id="valGovt">50</span></div>
+          <input type="range" id="sldGovt" min="0" max="100" value="50" oninput="recompute()">
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="score-dial-wrap">
+            <div class="score-value" id="lciScoreVal">600</div>
+            <div class="score-band-label"><span class="badge badge-teal" id="lciBand">Good</span></div>
+            <div class="score-range-note">Livelihood Capital Index · range 300–900</div>
+          </div>
+          <div style="height:1px;background:var(--line);margin:16px 0;"></div>
+          <div class="card-title" style="margin-bottom:10px;">Feature attribution trail</div>
+          <div class="contrib-bars" id="contribBars"></div>
+          <div class="section-note">Contributions shown relative to a neutral baseline weaver (score 600). This is the same attribution logic — and the same reconstruction check — used in the Python SHAP-based engine.</div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 00-2 2v14a2 2 0 002 2h3M16 3h3a2 2 0 012 2v14a2 2 0 01-2 2h-3M9 8h6M9 12h6M9 16h4"/></svg>
+            Structured score payload
+          </div>
+          <div class="json-output" id="jsonOutput"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="reset-bar">
+    <button class="btn btn-outline btn-sm" onclick="resetPrototype()">↺ Reset prototype to starting state</button>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   CENTRAL STATE
+   ============================================================ */
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONSOON_IDX = [6,7,8]; // Jul, Aug, Sep
+
+const ARCHETYPES = {
+  reliable: { name:'Reliable Veteran', months:[41,39,42,40,38,41,35,33,36,40,42,41], fulfillment:92, coop:88, digital:85, govt:100 },
+  seasonal: { name:'Seasonal Weaver', months:[36,35,34,37,36,35,20,18,22,34,36,35], fulfillment:80, coop:70, digital:65, govt:66 },
+  volatile: { name:'Volatile Producer', months:[30,12,38,9,33,15,26,10,29,14,31,11], fulfillment:58, coop:45, digital:35, govt:33 },
+  new:      { name:'New Entrant', months:[22,24,23,25,24,23,17,15,18,24,25,24], fulfillment:74, coop:40, digital:55, govt:33 },
+};
+
+const state = {
+  wallet: { balance: 3200, ledger: [] },
+  loan: { active:false, principal:0, outstanding:0 },
+  insurance: { enrolled:false, monthsPaid:0 },
+  months: ARCHETYPES.seasonal.months.slice(),
+  activeArchetype: 'seasonal',
+  lci: { fulfillment:75, coop:60, digital:65, govt:50 },
+};
+
+let currentLimit = 0;
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function inr(n){
+  return '₹' + Math.round(n).toLocaleString('en-IN');
+}
+function nowTime(){
+  const d = new Date();
+  return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function stdev(arr){
+  const m = mean(arr);
+  return Math.sqrt(mean(arr.map(x=>(x-m)*(x-m))));
+}
+function coefficientOfVariation(arr){
+  const m = mean(arr);
+  if(m===0) return 1;
+  return stdev(arr)/m;
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const target = btn.dataset.view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+target).classList.add('active');
+});
+
+/* ============================================================
+   STATUS STRIP
+   ============================================================ */
+function renderStatusStrip(){
+  const el = document.getElementById('statusStrip');
+  const lci = computeLCI();
+  el.innerHTML = `
+    <div class="status-chip"><span class="dot" style="background:var(--moss)"></span>Wallet <b>${inr(state.wallet.balance)}</b></div>
+    <div class="status-chip"><span class="dot" style="background:var(--teal)"></span>LCI <b>${lci.score}</b> · ${lci.band}</div>
+    <div class="status-chip ${state.loan.active?'':'dim'}"><span class="dot" style="background:var(--red)"></span>Loom Loan ${state.loan.active? '<b>'+inr(state.loan.outstanding)+' outstanding</b>' : 'none active'}</div>
+    <div class="status-chip ${state.insurance.enrolled?'':'dim'}"><span class="dot" style="background:var(--gold)"></span>Loom Suraksha ${state.insurance.enrolled? 'enrolled' : 'not enrolled'}</div>
+  `;
+}
+
+/* ============================================================
+   WALLET + LEDGER
+   ============================================================ */
+function addLedger(label, amount, kind){
+  state.wallet.ledger.unshift({ label, amount, kind, time: nowTime() });
+  renderLedger();
+}
+function renderLedger(){
+  const el = document.getElementById('ledgerList');
+  document.getElementById('walletBalance').textContent = inr(state.wallet.balance);
+  if(state.wallet.ledger.length===0){
+    el.innerHTML = '<div class="ledger-empty">No transactions yet. Simulate a sale to get started.</div>';
+    return;
+  }
+  el.innerHTML = state.wallet.ledger.slice(0,10).map(t=>{
+    const iconBg = t.kind==='credit' ? 'var(--moss-soft)' : t.kind==='repayment' ? 'var(--red-soft)' : t.kind==='insurance' ? 'var(--gold-soft)' : t.kind==='claim' ? 'var(--moss-soft)' : 'var(--teal-soft)';
+    const iconColor = t.kind==='credit' ? 'var(--moss)' : t.kind==='repayment' ? 'var(--red)' : t.kind==='insurance' ? '#8a6218' : t.kind==='claim' ? 'var(--moss)' : 'var(--teal)';
+    const sign = (t.kind==='credit' || t.kind==='claim') ? '+' : (t.kind==='loan_info' ? '' : '−');
+    const amtClass = (t.kind==='credit'||t.kind==='claim') ? 'credit' : (t.kind==='loan_info' ? 'neutral' : 'debit');
+    return `<div class="ledger-row">
+      <div class="ledger-icon" style="background:${iconBg};color:${iconColor};">${ledgerIcon(t.kind)}</div>
+      <div class="ledger-main">
+        <div class="ledger-label">${t.label}</div>
+        <div class="ledger-time">${t.time}</div>
+      </div>
+      <div class="ledger-amount ${amtClass}">${sign}${inr(Math.abs(t.amount))}</div>
+    </div>`;
+  }).join('');
+}
+function ledgerIcon(kind){
+  const icons = {
+    credit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+    repayment: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 8l4 4-4 4M3 12h18"/></svg>',
+    insurance: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l8 3v6c0 4.5-3 7.5-8 9-5-1.5-8-4.5-8-9V6z"/></svg>',
+    claim: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
+    loan_info: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="6" width="18" height="13" rx="2"/></svg>',
+  };
+  return icons[kind] || icons.credit;
+}
+
+function simulateSale(amount, label){
+  const note = document.getElementById('repayNote');
+  if(state.loan.active && state.loan.outstanding > 0){
+    let repay = Math.round(amount * 0.15);
+    repay = Math.min(repay, state.loan.outstanding);
+    const weaverShare = amount - repay;
+    state.wallet.balance += weaverShare;
+    state.loan.outstanding -= repay;
+    addLedger(label, amount, 'credit');
+    addLedger('Auto-repayment to Loom Loan (15%)', repay, 'repayment');
+    note.style.display = 'block';
+    note.textContent = `Auto-repayment fired: ${inr(repay)} routed to your Loom Loan, ${inr(weaverShare)} released to you. Outstanding is now ${inr(state.loan.outstanding)}.`;
+    if(state.loan.outstanding <= 0){
+      state.loan.active = false;
+      state.loan.outstanding = 0;
+      note.textContent += ' Loan fully repaid — no more deductions.';
+    }
+  } else {
+    state.wallet.balance += amount;
+    addLedger(label, amount, 'credit');
+    note.style.display = 'none';
+  }
+  renderLoanView();
+  renderStatusStrip();
+}
+
+/* ============================================================
+   LOOM LOAN
+   ============================================================ */
+function renderLoanView(){
+  const lci = computeLCI();
+  currentLimit = Math.max(3000, Math.min(50000, Math.round(((lci.score-300)/600)*50000/500)*500));
+  const availableNow = Math.max(0, currentLimit - state.loan.outstanding);
+  document.getElementById('limitFill').style.width = Math.round((availableNow/50000)*100)+'%';
+  document.getElementById('limitAvailable').textContent = inr(availableNow);
+  document.getElementById('limitMax').textContent = inr(50000);
+
+  const emptyEl = document.getElementById('loanStatusEmpty');
+  const cardEl = document.getElementById('loanStatusCard');
+  if(state.loan.active){
+    emptyEl.style.display = 'none';
+    cardEl.style.display = 'block';
+    document.getElementById('loanPrincipal').textContent = inr(state.loan.principal);
+    document.getElementById('loanOutstanding').textContent = inr(state.loan.outstanding);
+  } else {
+    emptyEl.style.display = 'block';
+    cardEl.style.display = 'none';
+  }
+}
+
+function buyYarn(){
+  const input = document.getElementById('loanAmount');
+  const amount = parseInt(input.value, 10);
+  const lci = computeLCI();
+  const limit = Math.max(3000, Math.min(50000, Math.round(((lci.score-300)/600)*50000/500)*500));
+  const available = limit - state.loan.outstanding;
+
+  if(!amount || amount <= 0){ alert('Enter an amount to disburse.'); return; }
+  if(amount > available){ alert(`That exceeds your available limit of ${inr(available)}.`); return; }
+
+  const shuttle = document.getElementById('loanShuttle');
+  shuttle.classList.remove('active'); void shuttle.offsetWidth; shuttle.classList.add('active');
+
+  setTimeout(()=>{
+    state.loan.active = true;
+    state.loan.principal += amount;
+    state.loan.outstanding += amount;
+    addLedger('Loom Loan disbursed → Yarn Supplier (off-wallet)', amount, 'loan_info');
+    input.value = '';
+    renderLoanView();
+    renderStatusStrip();
+  }, 1200);
+}
+
+/* ============================================================
+   INSURANCE
+   ============================================================ */
+function toggleInsurance(checked){
+  state.insurance.enrolled = checked;
+  const note = document.getElementById('insStatusNote');
+  if(checked){
+    note.textContent = 'Enrolled. ₹10 will be deducted automatically whenever you simulate a month passing.';
+  } else {
+    note.textContent = 'Not enrolled. Turn on coverage above.';
+  }
+  renderStatusStrip();
+}
+function simulateMonth(){
+  if(!state.insurance.enrolled){
+    alert('Turn on Loom Suraksha coverage first.');
+    return;
+  }
+  state.wallet.balance -= 10;
+  state.insurance.monthsPaid += 1;
+  addLedger('Loom Suraksha monthly premium', 10, 'insurance');
+  renderStatusStrip();
+}
+function fileClaim(){
+  if(!state.insurance.enrolled){ alert('You need to be enrolled in Loom Suraksha to file a claim.'); return; }
+  const type = document.getElementById('claimType').value;
+  const verify = document.getElementById('claimVerify');
+  const flash = document.getElementById('payoutFlash');
+  const btn = document.getElementById('claimBtn');
+  flash.classList.remove('active');
+  verify.classList.add('active');
+  btn.disabled = true;
+
+  setTimeout(()=>{
+    verify.classList.remove('active');
+    btn.disabled = false;
+    state.wallet.balance += 2000;
+    const label = type==='loom' ? 'Loom breakdown confirmed by partner repair-shop' : 'Hospital admission confirmed by insurer API';
+    addLedger('Loom Suraksha claim payout', 2000, 'claim');
+    flash.classList.add('active');
+    flash.innerHTML = `<b>${label}.</b><br>₹2,000 released to your Karigar Wallet — no forms, no adjuster visit.`;
+    renderStatusStrip();
+  }, 1500);
+}
+
+/* ============================================================
+   WHATSAPP ASSISTANT
+   ============================================================ */
+function waPush(html, out){
+  const body = document.getElementById('waBody');
+  const div = document.createElement('div');
+  div.className = 'wa-msg ' + (out ? 'out' : 'in');
+  div.innerHTML = `<div class="wa-bubble">${html}<div class="wa-time">${nowTime()}</div></div>`;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+function waTyping(show){
+  let el = document.getElementById('waTypingIndicator');
+  if(show){
+    if(el) return;
+    const body = document.getElementById('waBody');
+    const div = document.createElement('div');
+    div.className = 'wa-msg in wa-typing active';
+    div.id = 'waTypingIndicator';
+    div.innerHTML = `<div class="wa-bubble"><div class="wa-typing-dot"></div><div class="wa-typing-dot"></div><div class="wa-typing-dot"></div></div>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  } else {
+    if(el) el.remove();
+  }
+}
+function waBotReply(html, delay=700){
+  waTyping(true);
+  setTimeout(()=>{ waTyping(false); waPush(html, false); }, delay);
+}
+function waAction(kind){
+  if(kind==='balance'){
+    waPush('Check balance', true);
+    waBotReply(`Your Karigar Wallet balance is <b>${inr(state.wallet.balance)}</b>.`);
+  } else if(kind==='score'){
+    waPush('My score', true);
+    const lci = computeLCI();
+    const weakest = lci.contributions.slice().sort((a,b)=>a.value-b.value)[0];
+    waBotReply(`Your Livelihood Capital Index is <b>${lci.score}</b> (${lci.band}). ${weakest.nudge}`);
+  } else if(kind==='buyyarn'){
+    waPush('Buy yarn ₹4,000', true);
+    waBotReply('Checking your available limit…', 500);
+    setTimeout(()=>{
+      const lci = computeLCI();
+      const limit = Math.max(3000, Math.min(50000, Math.round(((lci.score-300)/600)*50000/500)*500));
+      const available = limit - state.loan.outstanding;
+      if(4000 > available){
+        waBotReply(`That's above your available limit of ${inr(available)} right now. Build your score in the Credit Engine tab to raise it.`, 900);
+      } else {
+        state.loan.active = true;
+        state.loan.principal += 4000;
+        state.loan.outstanding += 4000;
+        addLedger('Loom Loan disbursed → Yarn Supplier (via Assistant)', 4000, 'loan_info');
+        renderLoanView(); renderStatusStrip();
+        waBotReply('Approved — ₹4,000 sent straight to your yarn supplier. Repayment will auto-deduct from your next few sales.', 1300);
+      }
+    }, 600);
+  } else if(kind==='claim'){
+    waPush('File insurance claim', true);
+    if(!state.insurance.enrolled){
+      waBotReply("You're not enrolled in Loom Suraksha yet. Turn it on from the Loom Suraksha tab first.");
+    } else {
+      waBotReply('Confirming your loom breakdown ticket with our insurer…', 900);
+      setTimeout(()=>{
+        state.wallet.balance += 2000;
+        addLedger('Loom Suraksha claim payout (via Assistant)', 2000, 'claim');
+        renderStatusStrip();
+        waBotReply('Confirmed. ₹2,000 has been added to your wallet.', 1000);
+      }, 1000);
+    }
+  } else if(kind==='voice'){
+    playVoiceDemo();
+  }
+}
+function waSendText(){
+  const input = document.getElementById('waTextInput');
+  const text = input.value.trim();
+  if(!text) return;
+  waPush(text, true);
+  input.value = '';
+  waBotReply("I can help with: balance, your score, buying yarn, or filing a Loom Suraksha claim — try the quick-reply buttons below, or say it in your own words next time and I'll route it the same way.");
+}
+function playVoiceDemo(){
+  const body = document.getElementById('waBody');
+  const div = document.createElement('div');
+  div.className = 'wa-msg out';
+  const bars = Array.from({length:22},()=> Math.round(6+Math.random()*14)).map(h=>`<span style="height:${h}px"></span>`).join('');
+  div.innerHTML = `<div class="wa-bubble">
+    <div class="wa-voice">
+      <button class="wa-voice-play" onclick="this.closest('.wa-bubble').querySelector('.wa-transcript').classList.add('show')">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div class="wa-waveform">${bars}</div>
+      <span class="wa-voice-dur">0:07</span>
+    </div>
+    <div class="wa-transcript">Transcribed (Tamil → English): "I need money to buy yarn for next week's order."</div>
+    <div class="wa-time">${nowTime()}</div>
+  </div>`;
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+  waBotReply('Got it from your voice note — that sounds like a Loom Loan request. Want me to check your available limit?', 1100);
+}
+
+/* ============================================================
+   LCI ENGINE
+   ============================================================ */
+function renderMonthsChart(){
+  const el = document.getElementById('monthsChart');
+  const max = Math.max(...state.months, 10);
+  el.innerHTML = state.months.map((v,i)=>{
+    const isMon = MONSOON_IDX.includes(i);
+    const h = Math.max(4, Math.round((v/max)*100));
+    return `<div class="month-bar-wrap">
+      <div class="month-bar ${isMon?'monsoon':''}" style="height:${h}%"></div>
+      <div class="month-label">${MONTH_NAMES[i]}</div>
+    </div>`;
+  }).join('');
+}
+
+function computeProductionConsistency(){
+  const raw = coefficientOfVariation(state.months);
+  const nonMonsoon = state.months.filter((_,i)=>!MONSOON_IDX.includes(i));
+  const adjusted = coefficientOfVariation(nonMonsoon);
+  const explained = (raw - adjusted) > 0.05;
+  const applyToggle = document.getElementById('monsoonToggle').checked;
+  const used = (applyToggle && explained) ? adjusted : raw;
+  const score01 = Math.max(0, Math.min(1, 1 - (used/0.6)));
+  return { raw, adjusted, explained, used, score: score01*100 };
+}
+
+function computeLCI(){
+  const cv = computeProductionConsistency();
+  const fulfillment = parseFloat(document.getElementById('sldFulfillment')?.value ?? state.lci.fulfillment);
+  const coop = parseFloat(document.getElementById('sldCoop')?.value ?? state.lci.coop);
+  const digital = parseFloat(document.getElementById('sldDigital')?.value ?? state.lci.digital);
+  const govt = parseFloat(document.getElementById('sldGovt')?.value ?? state.lci.govt);
+
+  const weights = { production:0.30, fulfillment:0.25, digital:0.20, coop:0.15, govt:0.10 };
+  const values = { production: cv.score, fulfillment, digital, coop, govt };
+
+  let scoreDelta = 0;
+  const contributions = [];
+  const nudges = {
+    production: 'Keep your loom running on a steady weekly rhythm outside the monsoon months — consistent output raises this fastest.',
+    fulfillment: 'Complete your next 3 consecutive marketplace deliveries on time to raise this score.',
+    coop: 'Attend your next few cooperative meetings and keep your membership active.',
+    digital: 'Receive more sale payments directly into your Karigar Wallet instead of cash.',
+    govt: "Enrol in the Bunkar Mudra Yojana or e-Shram if you haven't already — a one-time boost.",
+  };
+  for(const key of Object.keys(weights)){
+    const w = weights[key];
+    const v = values[key];
+    const contribScore = ((w*v - w*50)/100)*600;
+    scoreDelta += contribScore;
+    contributions.push({ key, label: labelFor(key), value: v, weight:w, contribScore });
+  }
+  const baseline = 600;
+  const score = Math.round(Math.max(300, Math.min(900, baseline + scoreDelta)));
+  const band = score>=750?'Excellent': score>=650?'Good': score>=550?'Fair':'Needs Building';
+
+  return {
+    score, band, baseline, cv,
+    contributions: contributions.map(c=>({...c, nudge: nudges[c.key]})),
+  };
+}
+function labelFor(key){
+  return { production:'Production consistency', fulfillment:'Fulfilment history', coop:'Cooperative standing', digital:'Digital payment footprint', govt:'Govt. scheme enrolment' }[key];
+}
+
+function renderLCI(){
+  const lci = computeLCI();
+
+  document.getElementById('rawCv').textContent = lci.cv.raw.toFixed(3);
+  document.getElementById('adjCv').textContent = lci.cv.adjusted.toFixed(3);
+  document.getElementById('usedCv').textContent = lci.cv.used.toFixed(3) + (lci.cv.explained && document.getElementById('monsoonToggle').checked ? ' (adjusted)' : ' (raw)');
+
+  document.getElementById('lciScoreVal').textContent = lci.score;
+  const bandEl = document.getElementById('lciBand');
+  bandEl.textContent = lci.band;
+  bandEl.className = 'badge ' + (lci.band==='Excellent'?'badge-green': lci.band==='Good'?'badge-teal': lci.band==='Fair'?'badge-gold':'badge-red');
+
+  const maxAbs = Math.max(...lci.contributions.map(c=>Math.abs(c.contribScore)), 40);
+  document.getElementById('contribBars').innerHTML = lci.contributions.map(c=>{
+    const pct = Math.min(50, (Math.abs(c.contribScore)/maxAbs)*50);
+    const cls = c.contribScore >= 0 ? 'pos' : 'neg';
+    const style = c.contribScore >= 0 ? `left:50%;width:${pct}%;` : `right:50%;width:${pct}%;`;
+    return `<div class="contrib-row">
+      <div class="contrib-name">${c.label}</div>
+      <div class="contrib-track"><div class="contrib-mid"></div><div class="contrib-fill ${cls}" style="${style}"></div></div>
+      <div class="contrib-val">${c.contribScore>=0?'+':''}${Math.round(c.contribScore)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('valFulfillment').textContent = Math.round(document.getElementById('sldFulfillment').value);
+  document.getElementById('valCoop').textContent = Math.round(document.getElementById('sldCoop').value);
+  document.getElementById('valDigital').textContent = Math.round(document.getElementById('sldDigital').value);
+  document.getElementById('valGovt').textContent = Math.round(document.getElementById('sldGovt').value);
+
+  renderJson(lci);
+  return lci;
+}
+
+function renderJson(lci){
+  const payload = {
+    weaver_id: "W-DEMO-" + state.activeArchetype.toUpperCase(),
+    livelihood_capital_index: lci.score,
+    score_band: lci.band,
+    feature_attribution_trail: Object.fromEntries(lci.contributions.map(c=>[c.key, Math.round(c.contribScore*10)/10])),
+    baseline_score: lci.baseline,
+    seasonal_note: {
+      raw_cv: Math.round(lci.cv.raw*1000)/1000,
+      monsoon_adjusted_cv: Math.round(lci.cv.adjusted*1000)/1000,
+      seasonal_dip_explained: lci.cv.explained,
+    },
+    voice_nudge: lci.contributions.slice().sort((a,b)=>a.contribScore-b.contribScore)[0].nudge,
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const highlighted = json
+    .replace(/"([a-zA-Z_]+)":/g, '<span class="json-key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="json-str">"$1"</span>')
+    .replace(/: (-?\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+    .replace(/: (true|false)/g, ': <span class="json-bool">$1</span>');
+  document.getElementById('jsonOutput').innerHTML = highlighted;
+}
+
+function loadArchetype(key){
+  const a = ARCHETYPES[key];
+  state.months = a.months.slice();
+  state.activeArchetype = key;
+  document.getElementById('sldFulfillment').value = a.fulfillment;
+  document.getElementById('sldCoop').value = a.coop;
+  document.getElementById('sldDigital').value = a.digital;
+  document.getElementById('sldGovt').value = a.govt;
+  document.querySelectorAll('.archetype-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderMonthsChart();
+  recompute();
+}
+
+function recompute(){
+  renderMonthsChart();
+  const lci = renderLCI();
+  renderLoanView();
+  renderStatusStrip();
+  return lci;
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
+function resetPrototype(){
+  if(!confirm('Reset the whole prototype to its starting state?')) return;
+  state.wallet = { balance: 3200, ledger: [] };
+  state.loan = { active:false, principal:0, outstanding:0 };
+  state.insurance = { enrolled:false, monthsPaid:0 };
+  document.getElementById('insToggle').checked = false;
+  document.getElementById('insStatusNote').textContent = 'Not enrolled. Turn on coverage above.';
+  document.getElementById('payoutFlash').classList.remove('active');
+  document.getElementById('repayNote').style.display = 'none';
+  document.getElementById('waBody').innerHTML = '';
+  seedChat();
+  loadArchetype('seasonal');
+  renderLedger();
+  renderStatusStrip();
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function seedChat(){
+  waPush("Namaste! I'm your Karigar Sahayak — ask me about your balance, your score, buying yarn, or your Loom Suraksha cover. Or use the buttons below.", false);
+}
+
+function init(){
+  renderMonthsChart();
+  renderLedger();
+  seedChat();
+  recompute();
+}
+init();
+</script>
+</body>
+</html>

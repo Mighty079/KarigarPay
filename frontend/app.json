@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "KarigarPay",
+    "slug": "karigarpay",
+    "icon": "./assets/icon.png",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#FAF6EE"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.karigarpay.neobank",
+      "permissions": ["INTERNET"]
+    }
+  }
+}

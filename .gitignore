@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env.local
+
+# Android build outputs & caches
+*.apk
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/.cxx/
+frontend/android/local.properties
+frontend/android/*.iml
+
+# Expo & IDEs
+.expo/
+frontend/.expo/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files & logs
+.DS_Store
+Thumbs.db
+*.log
+backend/.git_backup/
